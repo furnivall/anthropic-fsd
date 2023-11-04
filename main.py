@@ -57,9 +57,6 @@ def main():
             # This is where we could introduce our checks for other linked files
 
 
-
-
-
     except FileNotFoundError:
         print(f"The file {args.script} does not exist or is not a file.", file=sys.stderr)
         sys.exit(2)
