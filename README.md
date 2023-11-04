@@ -18,6 +18,7 @@ For this, we should give the user two options:
 1) Infer filename from error text
 2) Effective API usage - not wasting requests
 3) Possible stretch idea - look at full codebases (or at least as much that we can fit in context window)
+4) LLMs suck at maths. ensure the specific line is highlighted for the LLM's context as it cannot find relative line numbers.
 
 ##### Extra ideas
 - Diffing with colours
