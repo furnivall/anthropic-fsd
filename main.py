@@ -2,22 +2,18 @@ import argparse
 import subprocess
 import sys
 from langchain.chat_models import ChatAnthropic
-from langchain.output_parsers import CommaSeparatedListOutputParser
 from langchain.prompts.chat import (
     ChatPromptTemplate,
-    SystemMessagePromptTemplate,
-    AIMessagePromptTemplate,
-    HumanMessagePromptTemplate,
 )
-from langchain.schema import AIMessage, HumanMessage, SystemMessage, BaseOutputParser
 
-template = """You are a helpful assistant who reads in error messages and file content and returns
-a potential solution to the error. A user will pass in a file path, file content and an error message, and you should
-use the file content to generate a solution to the error. ONLY return a solution, and nothing more."""
-human_template = "***{filename}*** \n ***{error}*** \n ***{file_content}***"
+inference_template = """You are a world class software developer who reads in filename and file content. 
+A user will pass in a file path, file content and you should
+then infer what you believe the purpose of the file to be. 
+Under no circumstances provide any other information. Give me your best attempt."""
+human_template = "***{filename}*** \n ***{file_content}***"
 
 chat_prompt = ChatPromptTemplate.from_messages([
-    ("system", template),
+    ("system", inference_template),
     ("human", human_template),
 ])
 
@@ -54,7 +50,7 @@ def main():
             print(type(stderr_output))
 
             chain = chat_prompt | ChatAnthropic()
-            input ={"filename": file_path, "error": stderr_output, "file_content": content}
+            input = {"filename": file_path, "file_content": content}
             print(chain.invoke(input))
             print('Running chain')
 
@@ -70,8 +66,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# CLI - handle piped input
-
-
-# Check for error code 1 on piped input

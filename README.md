@@ -22,7 +22,7 @@ For this, we should give the user two options:
 
 ##### Extra ideas
 - Diffing with colours
-- 
+- Provide refactoring advice on code which already works (i.e. not appending output)
 
 
 
