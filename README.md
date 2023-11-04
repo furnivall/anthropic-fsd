@@ -31,23 +31,43 @@ Input: Filename + Contents of Filename
 
 Output: 
     A. Intent
-    B. Ask user if Intent is 1 (Good) or 0 (Bad)
+    B. Ask user if our inferred intent is correct
 
-if intent == 1:
-    Analyze: Error + Contents of Filename + intent
+if intent is accepted by the user:
+    Send a prompt broadly asking "can you solve the error with 100% certainty, return 1 if yes, 0 if true only", along with the error text, Contents of Filename + intent
+    
     Output: 1 (Good) or 0 (Bad)
     
-    if 1: Re-call: with best solve
-    if 0: [Not enough info] Recursion Re-call: with Filenames of Error. 
-           Continue till 1. (APPLY CONSTRAINTS)
+    if 1:
+        Call the API again with the same set of appended files but different prompt asking for the best solution possible.
+        Return solution to user <in whatever form we decide on>
+    if 0:
+        This means the LLM has not got enough information to infer a solution to the problem.
+        At this point, we need to add additional context. 
+        One approach is to gradually append files from the TraceBack in reverse order to the prompt.
+        This could naturally get quite big, so we'll need to implement constraints to ensure we are not using excessive calls.
+        We could ask the user after each iteration if they want to add an additional file before we do it (including the filename)
+        <this is likely to be the most complex element of the entire problem>
+        Continue till 1. 
 
 else: intent == 0:
   
-    Recursive Re-call: with Focused questions from Intent + Contents of Filename
-    Output: 1 (Good) or 0 (Bad)
+    Discovering that the user does not agree with the perceived intent, send LLM a second prompt with the following:
+        1) Failed Intent
+        2) Filename + file content
+        3) Prompt requesting clarifying questions (these can be fleshed out later)
+    Output: Set of clarifying questions as before
+    
+    Send the above output to user, requesting answers to clarifying questions.
+    
+    Send another request to LLM containing above params plus the answers mentioned, asking it to generate a new perceived intention.
+    Send THAT to the user and check if new intent is valid. 
 
-    if 1: Procede to the case of intent == 1
-    if 0: Continue Recursion
+    If valid, go to the intent/solve/more info loop
+    If not valid:
+        re-run the clarifying questions loop with additional context.
+
+
 ```
 
 
