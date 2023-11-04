@@ -3,6 +3,7 @@ import subprocess
 import sys
 import re
 from pprint import pprint
+from typing import List
 import xml.etree.ElementTree as ET
 from langchain.chat_models import ChatAnthropic
 from langchain.prompts.chat import (
@@ -24,16 +25,32 @@ Under no circumstances provide any other information. Give me your best attempt.
     input = {"filename": file_path, "file_content": content}
     return chain.invoke(input)
 
+
+def iterate_infer_purpose(inference, questions_and_answers):
+    pass
+
+def get_user_answers(questions):
+    q_and_a = []
+    for q in questions:
+        pprint(q)
+        a = input('Answer: ')
+        if a: q_and_a.append([q, a])
+
+
 def get_user_decision_on_inference(inference):
-    print(f"Initial inference: {inference}")
-    print("Do you agree with this inference? (y/n)")
+    pprint(f"Initial inference: {inference}")
+    pprint("Do you agree with this inference? (y/n)")
     user_input = input()
+    if user_input == 'Y':
+        return inference
+    elif user_input == 'N':
+        iterate_user_input()
     # todo do some validation here - might as well make it True/False for type safety
     return user_input
 
 
-def clarifying_questions(file_path, content, error_message):
-    questions_template = """You are a world class software developer who reads in filename, file_content, and error_message. A user will pass in a filename, file content, error_message, and purpose and you should then infer some clarifying questions which would help someone to understand the intent of the given project. Under no circumstances provide any other information. Give me your best attempt. Provide the questions individually in structured XML format. An example of this format is... ```<questions><question id="1"><text>Why is x data in csv format?</text></question><question id="2"><text>What are you expecting as an output?</text></question><question id="3"><text>How does this algorithm work?</text></question></questions>```"""
+def get_clarifying_questions(file_path, content, error_message):
+    questions_template = """You are a world class software developer. I will send you a filename, file content, error_message, and purpose and you should then infer some clarifying questions which would help someone to understand the intent of the given project. Under no circumstances provide any other information. Give me your best attempt. Provide the questions individually in structured XML format. An example of this format is... ```<questions><question id="1"><text>Why is x data in csv format?</text></question><question id="2"><text>What are you expecting as an output?</text></question><question id="3"><text>How does this algorithm work?</text></question></questions>```. Use as few questions as possible and do not ask simplistic questions, like 'What are you building?'"""
     human_template = "***{filename}*** \n ***{file_content}*** \n ***{error_message}***"
     chat_prompt = ChatPromptTemplate.from_messages([
         ("system", questions_template),
@@ -62,6 +79,7 @@ def run_script(file_path):
     )
     return process.returncode, process.stderr, file_path
 
+
 def read_file_content(file_path):
     with open(file_path, 'r') as f:
         content = f.read()
@@ -77,14 +95,25 @@ def main():
         exit_code, stderr_output, file_path = run_script(args.script)
         content = read_file_content(file_path)
         if exit_code != 0:
-            print(f"Error code: {exit_code}")
-            initial_inference = infer_purpose(file_path, content)
-            get_user_decision_on_inference(initial_inference)
+            pprint(f"Error code: {exit_code}")
+            # initial_inference = infer_purpose(file_path, content)
+            # get_user_decision_on_inference(initial_inference)
 
-            purpose_inf = infer_purpose(file_path, content)
-            print(f"Initial inference: {purpose_inf}")
-            questions = clarifying_questions(file_path, content, stderr_output)
-            print(f"Some Clarifying Questions to Understand the intent...\n\n{questions}")
+            purpose_inf = infer_purpose(
+                file_path,
+                content
+            )
+            pprint(f"Initial inference: \n{purpose_inf}")
+ 
+            questions: List[str] = get_clarifying_questions(
+                file_path,
+                content,
+                stderr_output,
+            )
+            
+            q_and_a = get_user_answers(questions)
+            
+            breakpoint()        
                 
             # For future development needs, stderr_output is stored in a variable
             # You can process stderr_output as needed here
