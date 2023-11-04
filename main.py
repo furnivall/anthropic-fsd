@@ -21,8 +21,12 @@ Under no circumstances provide any other information. Give me your best attempt.
     input = {"filename": file_path, "file_content": content}
     return chain.invoke(input)
 
-
-
+def get_user_decision_on_inference(inference):
+    print(f"Initial inference: {inference}")
+    print("Do you agree with this inference? (y/n)")
+    user_input = input()
+    # todo do some validation here - might as well make it True/False for type safety
+    return user_input
 
 def run_script(file_path):
     process = subprocess.run(
@@ -31,7 +35,6 @@ def run_script(file_path):
         text=True
     )
     return process.returncode, process.stderr, file_path
-
 
 def read_file_content(file_path):
     with open(file_path, 'r') as f:
@@ -50,7 +53,7 @@ def main():
         if exit_code != 0:
             print(f"Error code: {exit_code}")
             initial_inference = infer_purpose(file_path, content)
-            print(f"Initial inference: {initial_inference}")
+            get_user_decision_on_inference(initial_inference)
 
             # For future development needs, stderr_output is stored in a variable
             # You can process stderr_output as needed here
