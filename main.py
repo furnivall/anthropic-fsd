@@ -105,28 +105,31 @@ def read_file_content(file_path):
 
 
 def can_you_fix(file_path, content, error_message, purpose):
-    solvability_template = """
-You are a world-class software developer. I am planning to send you the following information:
-1. A piece of python code
-2. The full stderror content produced by running the code
-3. The developer's confirmed intent for the given output.
-4. Filename of the python code
-Consider whether you are able to provide a solution that resolves the error with only the information contained above.
-Important: You must ONLY respond with either the integers 1 or 0. 1 means you can fix the error, 0 means you cannot.
-"""
-    human_template = "***{filename}*** \n ***{file_content}*** \n ***{error_message}*** \n ***{purpose}***"
+    solvability_template = """You are a world-class software developer. I am planning to send you the following 
+    information: 1. A piece of python code 2. The full stderror content produced by running the code 3. The 
+    developer's confirmed intent for the given output. 4. Filename of the python code. Consider the yes/no question of 
+    whether you are able to provide a solution that resolves the error with only the information contained above. 
+    Important: You must ONLY respond with either 1 or 0. 1 means you are confidently fix the error, 0 means you cannot.
+    
+    """
+    human_template = ("Filename: {filename} \n File Content: {file_content} \n Error Message: {error_message} \n Intent: {purpose}")
+
     chat_prompt = ChatPromptTemplate.from_messages([
         ("system", solvability_template),
         ("human", human_template),
     ])
-    chain = chat_prompt | ChatAnthropic(model="claude-2")
-    our_data = {"filename": file_path, "file_content": content, "error_message": error_message, "purpose": purpose}
+    chain = chat_prompt | ChatAnthropic(model="claude-2", temperature=0)
+    our_data = {"filename": file_path,
+                "file_content": content,
+                "error_message": error_message,
+                "purpose": purpose}
     print(our_data)
     llm_output = ''
     while llm_output not in ["0", "1"]:
         llm_output = chain.invoke(our_data).content.strip()
         print(llm_output)
     return int(llm_output)
+
 
 def main():
     parser = argparse.ArgumentParser(description="Run a Python script and capture its exit code.")
