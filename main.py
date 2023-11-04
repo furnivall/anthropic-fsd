@@ -1,6 +1,7 @@
 import argparse
 import subprocess
 import sys
+import re
 from pprint import pprint
 from typing import List
 import xml.etree.ElementTree as ET
@@ -105,31 +106,54 @@ def read_file_content(file_path):
 
 
 def can_you_fix(file_path, content, error_message, purpose):
-    solvability_template = """You are a world-class software developer. I am planning to send you the following 
-    information: 1. A piece of python code 2. The full stderror content produced by running the code 3. The 
-    developer's confirmed intent for the given output. 4. Filename of the python code. Consider the yes/no question of 
-    whether you are able to provide a solution that resolves the error with only the information contained above. 
-    Important: You must ONLY respond with either 1 or 0. 1 means you are confidently fix the error, 0 means you cannot.
-    
+    solvability_template = """
+    You are a world-class software developer. I am planning to send you the following information:
+    1. A piece of python code
+    2. The full stderror content produced by running the code
+    3. The developer's confirmed intent for the given output.
+    4. Filename of the python code
+    Consider whether you are able to provide a solution that resolves the error with only the information contained above.
+    Important: You must ONLY respond with either the integers 1 or 0. 1 means you can fix the error, 0 means you cannot.
+    Provide the questions individually in structured XML format. 
+        An example of this format is... 
+        ```<bool>1</bool>```
     """
-    human_template = ("Filename: {filename} \n File Content: {file_content} \n Error Message: {error_message} \n Intent: {purpose}")
-
+    human_template = "***{filename}*** \n ***{file_content}*** \n ***{error_message}*** \n ***{purpose}***"
     chat_prompt = ChatPromptTemplate.from_messages([
         ("system", solvability_template),
         ("human", human_template),
     ])
     chain = chat_prompt | ChatAnthropic(model="claude-2", temperature=0)
-    our_data = {"filename": file_path,
-                "file_content": content,
-                "error_message": error_message,
-                "purpose": purpose}
-    print(our_data)
-    llm_output = ''
+    our_data = {"filename": file_path, "file_content": content, "error_message": error_message, "purpose": purpose}
+    bool_regex = r"<bool>(0|1)</bool>"
+    llm_output = ""
     while llm_output not in ["0", "1"]:
-        llm_output = chain.invoke(our_data).content.strip()
-        print(llm_output)
+        llm_output = chain.invoke(our_data).content
+        llm_output = re.findall(bool_regex, llm_output)[0]
     return int(llm_output)
 
+
+def get_fix_code(file_path, content, error_message, purpose):
+    solvability_template = """
+    You are a world-class software developer who only responds in code and not english. I will send you the following information:
+    1. A piece of python code
+    2. The full error trace content produced by running the code
+    3. The developer's confirmed intent for the given output.
+    4. Filename of the python code
+
+    Return a python code that fixes the error below. don't include any explanations in your responses.
+
+    Assistant: {{list code}}
+    """
+    human_template = "Filename: ***{filename}*** \n File Content: ***{file_content}*** \n Error Message: ***{error_message}*** \n Purpose: ***{purpose}***"
+    chat_prompt = ChatPromptTemplate.from_messages([
+        ("system", solvability_template),
+        ("human", human_template),
+    ])
+    chain = chat_prompt | ChatAnthropic(model="claude-2", temperature=0)
+    our_data = {"filename": file_path, "file_content": content, "error_message": error_message, "purpose": purpose}
+    llm_output = chain.invoke(our_data).content
+    return llm_output
 
 def main():
     parser = argparse.ArgumentParser(description="Run a Python script and capture its exit code.")
@@ -150,15 +174,31 @@ def main():
             )
             purpose_inf = get_user_decision_on_inference(purpose_inf)
 
-            can_you_fix(file_path, content, stderr_output, purpose_inf.content)
-
-            questions: List[str] = get_clarifying_questions(
+            can_fix = False
+            while not can_fix:
+                can_fix = can_you_fix(
+                    file_path,
+                    content,
+                    stderr_output,
+                    purpose_inf.content
+                )
+            
+            code = get_fix_code(
                 file_path,
                 content,
                 stderr_output,
+                purpose_inf.content
             )
+            
+            pprint(code)
 
-            q_and_a = get_user_answers(questions)
+            # questions: List[str] = get_clarifying_questions(
+            #     file_path,
+            #     content,
+            #     stderr_output,
+            # )
+
+            # q_and_a = get_user_answers(questions)
 
             breakpoint()
 
