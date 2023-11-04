@@ -12,7 +12,7 @@ from langchain.prompts.chat import (
 from langchain.schema import AIMessage, HumanMessage, SystemMessage, BaseOutputParser
 
 template = """You are a helpful assistant who reads in error messages and file content and returns
-a potential solution to the error. A user will pass in a file path and an error message, and you should
+a potential solution to the error. A user will pass in a file path, file content and an error message, and you should
 use the file content to generate a solution to the error. ONLY return a solution, and nothing more."""
 human_template = "***{filename}*** \n ***{error}*** \n ***{file_content}***"
 
@@ -20,8 +20,6 @@ chat_prompt = ChatPromptTemplate.from_messages([
     ("system", template),
     ("human", human_template),
 ])
-
-
 
 
 def run_script(file_path):
@@ -32,10 +30,12 @@ def run_script(file_path):
     )
     return process.returncode, process.stderr, file_path
 
+
 def read_file_content(file_path):
     with open(file_path, 'r') as f:
         content = f.read()
     return content
+
 
 def main():
     parser = argparse.ArgumentParser(description="Run a Python script and capture its exit code.")
@@ -50,9 +50,12 @@ def main():
             # For future development needs, stderr_output is stored in a variable
             # You can process stderr_output as needed here
             # This is where we could introduce our checks for other linked files
+            print(chat_prompt[0])
+            print(type(stderr_output))
 
-            chain = chat_prompt | ChatAnthropic
-            print(chain.invoke({"filename": file_path, "error": stderr_output, "file_content": content}))
+            chain = chat_prompt | ChatAnthropic()
+            input ={"filename": file_path, "error": stderr_output, "file_content": content}
+            print(chain.invoke(input))
             print('Running chain')
 
 
@@ -64,11 +67,9 @@ def main():
         print(f"An error occurred: {e}", file=sys.stderr)
         sys.exit(1)
 
+
 if __name__ == "__main__":
     main()
-
-
-
 
 # CLI - handle piped input
 
