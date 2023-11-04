@@ -25,5 +25,29 @@ For this, we should give the user two options:
 - Diffing with colours
 - Provide refactoring advice on code which already works (i.e. not appending output)
 
+Potential Algo:
+
+Input: Filename + Contents of Filename
+
+Output: 
+    A. Intent
+    B. Ask user if Intent is 1 (Good) or 0 (Bad)
+
+if intent == 1:
+    Analyze: Error + Contents of Filename + intent
+    Output: 1 (Good) or 0 (Bad)
+    
+    if 1: Re-call: with best solve
+    if 0: [Not enough info] Recursion Re-call: with Filenames of Error. 
+           Continue till 1. (APPLY CONSTRAINTS)
+
+else: intent == 0:
+  
+    Recursive Re-call: with Focused questions from Intent + Contents of Filename
+    Output: 1 (Good) or 0 (Bad)
+
+    if 1: Procede to the case of intent == 1
+    if 0: Continue Recursion
+
 
 
