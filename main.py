@@ -6,16 +6,22 @@ from langchain.prompts.chat import (
     ChatPromptTemplate,
 )
 
-inference_template = """You are a world class software developer who reads in filename and file content. 
+
+def infer_purpose(file_path, content):
+    inference_template = """You are a world class software developer who reads in filename and file content. 
 A user will pass in a file path, file content and you should
 then infer what you believe the purpose of the file to be. 
 Under no circumstances provide any other information. Give me your best attempt."""
-human_template = "***{filename}*** \n ***{file_content}***"
+    human_template = "***{filename}*** \n ***{file_content}***"
+    chat_prompt = ChatPromptTemplate.from_messages([
+        ("system", inference_template),
+        ("human", human_template),
+    ])
+    chain = chat_prompt | ChatAnthropic(model="claude-2")
+    input = {"filename": file_path, "file_content": content}
+    return chain.invoke(input)
 
-chat_prompt = ChatPromptTemplate.from_messages([
-    ("system", inference_template),
-    ("human", human_template),
-])
+
 
 
 def run_script(file_path):
@@ -43,16 +49,14 @@ def main():
         content = read_file_content(file_path)
         if exit_code != 0:
             print(f"Error code: {exit_code}")
+            initial_inference = infer_purpose(file_path, content)
+            print(f"Initial inference: {initial_inference}")
+
             # For future development needs, stderr_output is stored in a variable
             # You can process stderr_output as needed here
             # This is where we could introduce our checks for other linked files
-            print(chat_prompt[0])
-            print(type(stderr_output))
 
-            chain = chat_prompt | ChatAnthropic()
-            input = {"filename": file_path, "file_content": content}
-            print(chain.invoke(input))
-            print('Running chain')
+
 
 
 
