@@ -1,6 +1,9 @@
 import argparse
 import subprocess
 import sys
+import re
+from pprint import pprint
+import xml.etree.ElementTree as ET
 from langchain.chat_models import ChatAnthropic
 from langchain.prompts.chat import (
     ChatPromptTemplate,
@@ -27,6 +30,29 @@ def get_user_decision_on_inference(inference):
     user_input = input()
     # todo do some validation here - might as well make it True/False for type safety
     return user_input
+
+
+def clarifying_questions(file_path, content, error_message):
+    questions_template = """You are a world class software developer who reads in filename, file_content, and error_message. A user will pass in a filename, file content, error_message, and purpose and you should then infer some clarifying questions which would help someone to understand the intent of the given project. Under no circumstances provide any other information. Give me your best attempt. Provide the questions individually in structured XML format. An example of this format is... ```<questions><question id="1"><text>Why is x data in csv format?</text></question><question id="2"><text>What are you expecting as an output?</text></question><question id="3"><text>How does this algorithm work?</text></question></questions>```"""
+    human_template = "***{filename}*** \n ***{file_content}*** \n ***{error_message}***"
+    chat_prompt = ChatPromptTemplate.from_messages([
+        ("system", questions_template),
+        ("human", human_template),
+    ])
+    chain = chat_prompt | ChatAnthropic(model="claude-2")
+    input = {
+        "filename": file_path,
+        "file_content": content,
+        "error_message": error_message, 
+    }
+    question_str = chain.invoke(input).content
+    root = ET.fromstring(question_str)
+    # Extract each <text> value into list 
+    questions = []
+    for q in root.findall('./question/text'):
+        questions.append(q.text)
+    return questions
+
 
 def run_script(file_path):
     process = subprocess.run(
@@ -55,10 +81,14 @@ def main():
             initial_inference = infer_purpose(file_path, content)
             get_user_decision_on_inference(initial_inference)
 
+            purpose_inf = infer_purpose(file_path, content)
+            print(f"Initial inference: {purpose_inf}")
+            questions = clarifying_questions(file_path, content, stderr_output)
+            print(f"Some Clarifying Questions to Understand the intent...\n\n{questions}")
+                
             # For future development needs, stderr_output is stored in a variable
             # You can process stderr_output as needed here
             # This is where we could introduce our checks for other linked files
-
 
     except FileNotFoundError:
         print(f"The file {args.script} does not exist or is not a file.", file=sys.stderr)
