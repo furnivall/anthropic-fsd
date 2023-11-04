@@ -26,7 +26,7 @@ For this, we should give the user two options:
 - Provide refactoring advice on code which already works (i.e. not appending output)
 
 Potential Algo:
-
+```
 Input: Filename + Contents of Filename
 
 Output: 
@@ -48,6 +48,6 @@ else: intent == 0:
 
     if 1: Procede to the case of intent == 1
     if 0: Continue Recursion
-
+```
 
 
