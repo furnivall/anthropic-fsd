@@ -69,18 +69,18 @@ def get_clarifying_questions(file_path, content, error_message):
     <question id="2"><text>What are you expecting as an output?</text></question>
     <question id="3"><text>How does this algorithm work?</text></question></questions>```. 
     Use as few questions as possible and do not ask simplistic questions, like 'What are you building?'"""
-    human_template = "***{filename}*** \n ***{file_content}*** \n ***{error_message}***"
+    human_template = "{filename} \n {file_content} \n {error_message}"
     chat_prompt = ChatPromptTemplate.from_messages([
         ("system", questions_template),
         ("human", human_template),
     ])
     chain = chat_prompt | ChatAnthropic(model="claude-2")
-    input = {
+    our_data = {
         "filename": file_path,
         "file_content": content,
         "error_message": error_message,
     }
-    question_str = chain.invoke(input).content
+    question_str = chain.invoke(our_data).content
     root = ET.fromstring(question_str)
     # Extract each <text> value into list 
     questions = []
@@ -114,13 +114,21 @@ You are a world-class software developer. I am planning to send you the followin
 Consider whether you are able to provide a solution that resolves the error with only the information contained above.
 Important: You must ONLY respond with either the integers 1 or 0. 1 means you can fix the error, 0 means you cannot.
 """
-    human_template = "***{filename}*** \n ***{file_content}*** \n ***{error_message}*** \n ***{purpose}***"
+    # human_template = "***{filename}*** \n ***{file_content}*** \n ***{error_message}*** \n ***{purpose}***"
+    human_template = "{filename} \n {file_content} \n {error_message} \n {purpose}"
     chat_prompt = ChatPromptTemplate.from_messages([
         ("system", solvability_template),
         ("human", human_template),
     ])
     chain = chat_prompt | ChatAnthropic(model="claude-2")
-    our_data = {"filename": file_path, "file_content": content, "error_message": error_message, "purpose": purpose}
+    # our_data = {"filename": file_path, "file_content": content, "error_message": error_message, "purpose": purpose}
+    # our_data = {"filename": file_path}
+    our_data = {
+        "filename": file_path,
+        "file_content": content,
+        "error_message": error_message,
+        "purpose": purpose
+    }
     print(our_data)
     llm_output = ''
     while llm_output not in ["0", "1"]:
