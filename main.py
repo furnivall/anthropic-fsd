@@ -6,6 +6,10 @@ from pprint import pprint
 from typing import List
 import xml.etree.ElementTree as ET
 from langchain.chat_models import ChatAnthropic
+from pygments import highlight
+from pygments.lexers import PythonLexer
+from pygments.formatters import TerminalFormatter
+import shutil
 from langchain.prompts.chat import ChatPromptTemplate
 
 
@@ -47,8 +51,7 @@ def infer_purpose_w_questions(file_path, content, q_and_a: List):
         human_template = f"{human_template} ***Question_{i+1}:*** {q[0]} \n ***Answer_{i+1}:*** {q[1]} \n"
     
     print(human_template)
-    exit()
-        
+
     chat_prompt = ChatPromptTemplate.from_messages([
         ("system", inference_template),
         ("human", human_template),
@@ -61,7 +64,7 @@ def infer_purpose_w_questions(file_path, content, q_and_a: List):
 def get_user_answers(questions):
     q_and_a = []
     for q in questions:
-        pprint("OPTIONALs hit ENTER")
+        pprint("Optional")
         pprint(q)
         a = input('Answer: ')
         if a: q_and_a.append([q, a])
@@ -185,7 +188,10 @@ def get_fix_code(file_path, content, error_message, purpose):
     our_data = {"filename": file_path, "file_content": content, "error_message": error_message, "purpose": purpose}
     llm_output = chain.invoke(our_data).content
     return llm_output
-
+def extract_code_from_markdown(markdown_text):
+    # Regex to find fenced code blocks
+    code_blocks = re.findall(r'```(?:.*\n)?((?:.|\n)*?)```', markdown_text)
+    return code_blocks
 def main():
     parser = argparse.ArgumentParser(description="Run a Python script and capture its exit code.")
     parser.add_argument('script', type=str, help="Path to the Python script to run.")
@@ -218,9 +224,13 @@ def main():
                 stderr_output,
                 purpose_inf.content
             )
-            
-            pprint(code)
 
+            code = extract_code_from_markdown(code)
+            # Adjust code width according to terminal size
+            terminal_width = shutil.get_terminal_size((80, 24)).columns
+            print("\n\n\nCongratulations, you have fixed the code! Here is your solution:")
+            pretty_code = highlight(code[0], PythonLexer(), TerminalFormatter())
+            print(pretty_code)
             # questions: List[str] = get_clarifying_questions(
             #     file_path,
             #     content,
