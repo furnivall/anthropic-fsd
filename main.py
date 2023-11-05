@@ -2,7 +2,6 @@ import argparse
 import subprocess
 import sys
 import re
-from pprint import pprint
 from typing import List
 import xml.etree.ElementTree as ET
 from langchain.chat_models import ChatAnthropic
@@ -10,9 +9,11 @@ from pygments import highlight
 from pygments.lexers import PythonLexer
 from pygments.formatters import TerminalFormatter
 from langchain.prompts.chat import ChatPromptTemplate
-
+from terminology import in_red, in_yellow, in_green, in_cyan, in_magenta
+import time
 
 def infer_purpose(file_path, content):
+    print(in_green("The LLM is now attempting to infer the purpose of your program. \nPlease wait."))
     inference_template = """
     You are a world class software developer. 
     I am going to send in a filename of a python file and the file's content. 
@@ -69,9 +70,10 @@ def get_user_answers(questions):
 
 def get_user_decision_on_inference(inference, file_path, content):
     user_input = 'fuck you claude'
-    print(inference.content)
+    print(in_magenta("My best guess at your intended purpose:"))
+    print(in_cyan(inference.content.split("Purpose:")[1].strip()))
     while user_input not in ['y', 'n']:
-        user_input = input("Do you agree with this inference? (y/n)").lower()
+        user_input = input(in_yellow("Do you agree with this inference? (y/n)")).lower()
     if user_input == 'y':
         return inference
     else:
@@ -86,7 +88,7 @@ def get_user_decision_on_inference(inference, file_path, content):
 
 
 def get_clarifying_questions(file_path, content, inference):
-    print("Understood. I'm now generating some questions to clarify the inference of the purpose.")
+    print(in_green("Understood. I'm now generating some questions to clarify the inference of the purpose."))
     questions_template = """You are a world class software developer. 
     I will send you a filename, file content, and purpose. 
     You should then infer some clarifying questions which would help someone to understand the intent of the given project. 
@@ -121,11 +123,21 @@ def get_clarifying_questions(file_path, content, inference):
 
 
 def run_script(file_path):
+    print(in_magenta("Welcome to fsd."))
+    time.sleep(1)
+    print(in_yellow(f"Running your code now ({file_path}). Please wait."))
+    time.sleep(1)
     process = subprocess.run(
         [sys.executable, file_path],
         capture_output=True,
         text=True
     )
+    if process.returncode == 0:
+        print(in_cyan("Your code ran successfully. Output as follows:"))
+        print(in_yellow(process.stdout))
+        exit(0)
+    else:
+        print(in_red("Your code returned error code 1. Not to worry, we're going to fix this together. \U0001F603"))
     return process.returncode, process.stderr, file_path
 
 
@@ -197,8 +209,7 @@ def main():
         exit_code, stderr_output, file_path = run_script(args.script)
         content = read_file_content(file_path)
         if exit_code != 0:
-            print(f"Code confirmed flawed. Continuing.")
-            
+
             # Initial guess at purpose of program.
             purpose_inf = infer_purpose(file_path, content)
             
@@ -207,6 +218,7 @@ def main():
 
             can_fix = False
             while not can_fix:
+
                 can_fix = can_you_fix(
                     file_path,
                     content,
@@ -222,8 +234,7 @@ def main():
             )
 
             code = extract_code_from_markdown(code)
-            # Adjust code width according to terminal size
-            print("\nCongratulations, you have fixed the code! Here is your solution:")
+            print(in_green("I think I may have fixed the code! Here is your solution:"))
             pretty_code = highlight(code[0], PythonLexer(), TerminalFormatter())
             print(pretty_code)
 
