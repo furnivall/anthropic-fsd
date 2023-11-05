@@ -9,7 +9,6 @@ from langchain.chat_models import ChatAnthropic
 from pygments import highlight
 from pygments.lexers import PythonLexer
 from pygments.formatters import TerminalFormatter
-import shutil
 from langchain.prompts.chat import ChatPromptTemplate
 
 
@@ -50,8 +49,6 @@ def infer_purpose_w_questions(file_path, content, q_and_a: List):
     for i, q in enumerate(q_and_a):
         human_template = f"{human_template} ***Question_{i+1}:*** {q[0]} \n ***Answer_{i+1}:*** {q[1]} \n"
     
-    print(human_template)
-
     chat_prompt = ChatPromptTemplate.from_messages([
         ("system", inference_template),
         ("human", human_template),
@@ -64,16 +61,15 @@ def infer_purpose_w_questions(file_path, content, q_and_a: List):
 def get_user_answers(questions):
     q_and_a = []
     for q in questions:
-        pprint("Optional")
-        pprint(q)
+        print(f"Question: {q}")
         a = input('Answer: ')
         if a: q_and_a.append([q, a])
     return q_and_a
 
 
 def get_user_decision_on_inference(inference, file_path, content):
-    pprint(inference.content)
     user_input = 'fuck you claude'
+    print(inference.content)
     while user_input not in ['y', 'n']:
         user_input = input("Do you agree with this inference? (y/n)").lower()
     if user_input == 'y':
@@ -90,7 +86,7 @@ def get_user_decision_on_inference(inference, file_path, content):
 
 
 def get_clarifying_questions(file_path, content, inference):
-    print("Inference NOT accepted by user, getting some questions to clarify the inference of the purpose.")
+    print("Understood. I'm now generating some questions to clarify the inference of the purpose.")
     questions_template = """You are a world class software developer. 
     I will send you a filename, file content, and purpose. 
     You should then infer some clarifying questions which would help someone to understand the intent of the given project. 
@@ -201,7 +197,7 @@ def main():
         exit_code, stderr_output, file_path = run_script(args.script)
         content = read_file_content(file_path)
         if exit_code != 0:
-            pprint(f"Code confirmed flawed. Continuing.")
+            print(f"Code confirmed flawed. Continuing.")
             
             # Initial guess at purpose of program.
             purpose_inf = infer_purpose(file_path, content)
@@ -227,23 +223,9 @@ def main():
 
             code = extract_code_from_markdown(code)
             # Adjust code width according to terminal size
-            terminal_width = shutil.get_terminal_size((80, 24)).columns
-            print("\n\n\nCongratulations, you have fixed the code! Here is your solution:")
+            print("\nCongratulations, you have fixed the code! Here is your solution:")
             pretty_code = highlight(code[0], PythonLexer(), TerminalFormatter())
             print(pretty_code)
-            # questions: List[str] = get_clarifying_questions(
-            #     file_path,
-            #     content,
-            #     stderr_output,
-            # )
-
-            # q_and_a = get_user_answers(questions)
-
-            # breakpoint()
-
-            # For future development needs, stderr_output is stored in a variable
-            # You can process stderr_output as needed here
-            # This is where we could introduce our checks for other linked files
 
     except FileNotFoundError:
         print(f"The file {args.script} does not exist or is not a file.", file=sys.stderr)
