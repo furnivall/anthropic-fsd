@@ -2,6 +2,7 @@ import argparse
 import subprocess
 import sys
 import re
+import textwrap
 from typing import List
 import xml.etree.ElementTree as ET
 from langchain.chat_models import ChatAnthropic
@@ -11,9 +12,10 @@ from pygments.formatters import TerminalFormatter
 from langchain.prompts.chat import ChatPromptTemplate
 from terminology import in_red, in_yellow, in_green, in_cyan, in_magenta
 import time
+from pyfiglet import Figlet
 
 def infer_purpose(file_path, content):
-    print(in_green("The LLM is now attempting to infer the purpose of your program. \nPlease wait."))
+    print(in_green("I am now attempting to infer the purpose of your program. Please wait..."))
     inference_template = """
     You are a world class software developer. 
     I am going to send in a filename of a python file and the file's content. 
@@ -70,11 +72,12 @@ def get_user_answers(questions):
 
 def get_user_decision_on_inference(inference, file_path, content):
     user_input = 'fuck you claude'
-    print(in_magenta("My best guess at your intended purpose:"))
-    print(in_cyan(inference.content.split("Purpose:")[1].strip()))
+    print(in_magenta("\nHere's my best guess at your intended purpose:"))
+    print(textwrap.fill(in_yellow(inference.content.split("Purpose:")[1].strip()), width=80))
     while user_input not in ['y', 'n']:
-        user_input = input(in_yellow("Do you agree with this inference? (y/n)")).lower()
+        user_input = input(in_cyan("Do you agree with this ? (y/n)")).lower()
     if user_input == 'y':
+        print(in_green("\nPerfect! I'll get to work trying to fix it now. Please wait a few seconds..."))
         return inference
     else:
         questions: List[str] = get_clarifying_questions(
@@ -86,9 +89,8 @@ def get_user_decision_on_inference(inference, file_path, content):
         new_inference = infer_purpose_w_questions(file_path, content, q_and_a)
         return get_user_decision_on_inference(new_inference, file_path, content)
 
-
 def get_clarifying_questions(file_path, content, inference):
-    print(in_green("Understood. I'm now generating some questions to clarify the inference of the purpose."))
+    print(in_green("Understood. I'm now generating some clarifying questions to provide a better idea of your intended purpose."))
     questions_template = """You are a world class software developer. 
     I will send you a filename, file content, and purpose. 
     You should then infer some clarifying questions which would help someone to understand the intent of the given project. 
@@ -123,7 +125,8 @@ def get_clarifying_questions(file_path, content, inference):
 
 
 def run_script(file_path):
-    print(in_magenta("Welcome to fsd."))
+    print(in_green(Figlet(font='roman').renderText('FSD').strip()))
+    print(in_magenta("Welcome to fsd. Your helpful assistant for fixing software bugs. \U0001F60E"))
     time.sleep(1)
     print(in_yellow(f"Running your code now ({file_path}). Please wait."))
     time.sleep(1)
@@ -137,7 +140,7 @@ def run_script(file_path):
         print(in_yellow(process.stdout))
         exit(0)
     else:
-        print(in_red("Your code returned error code 1. Not to worry, we're going to fix this together. \U0001F603"))
+        print(in_red("Eek - your code returned error code 1. Not to worry, we're going to fix this together. \U0001F603"))
     return process.returncode, process.stderr, file_path
 
 
@@ -201,6 +204,7 @@ def extract_code_from_markdown(markdown_text):
     code_blocks = re.findall(r'```(?:.*\n)?((?:.|\n)*?)```', markdown_text)
     return code_blocks
 def main():
+
     parser = argparse.ArgumentParser(description="Run a Python script and capture its exit code.")
     parser.add_argument('script', type=str, help="Path to the Python script to run.")
     args = parser.parse_args()
@@ -234,7 +238,7 @@ def main():
             )
 
             code = extract_code_from_markdown(code)
-            print(in_green("I think I may have fixed the code! Here is your solution:"))
+            print(in_magenta("\n\nI think I may have fixed the code! Here is your solution:"))
             pretty_code = highlight(code[0], PythonLexer(), TerminalFormatter())
             print(pretty_code)
 
