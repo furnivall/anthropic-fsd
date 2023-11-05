@@ -112,7 +112,7 @@ def can_you_fix(file_path, content, error_message, purpose):
     Important: You must ONLY respond with either 1 or 0. 1 means you are confidently fix the error, 0 means you cannot.
     
     """
-    human_template = ("Filename: {filename} \n File Content: {file_content} \n Error Message: {error_message} \n Intent: {purpose}")
+    human_template = ("Filename: {filename} \n File Content: {file_content} \n Error Message: {error_message} \n Intent: {purpose} \n IMPORTANT: return only one character.")
 
     chat_prompt = ChatPromptTemplate.from_messages([
         ("system", solvability_template),
