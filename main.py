@@ -11,11 +11,11 @@ from pygments.lexers import PythonLexer
 from pygments.formatters import TerminalFormatter
 from langchain.prompts.chat import ChatPromptTemplate
 
-
 from util import stack_trace_to_files
 from terminology import in_red, in_yellow, in_green, in_cyan, in_magenta
 import time
 from pyfiglet import Figlet
+
 
 def infer_purpose(file_path, content):
     print(in_green("\nI am now attempting to infer the purpose of your program. Please wait..."))
@@ -28,7 +28,7 @@ def infer_purpose(file_path, content):
     Use the heading 'Purpose' to indicate your answer.
     Give me your best attempt.
     """
-    
+
     human_template = "***{filename}*** \n ***{file_content}***"
     chat_prompt = ChatPromptTemplate.from_messages([
         ("system", inference_template),
@@ -49,12 +49,12 @@ def infer_purpose_w_questions(file_path, content, q_and_a: List):
     Use the heading 'Purpose' to indicate your answer.
     Give me your best attempt.
     """
-    
+
     human_template = "***Filename:*** {filename} \n ***File Content:*** {file_content} \n"
-    
+
     for i, q in enumerate(q_and_a):
-        human_template = f"{human_template} ***Question_{i+1}:*** {q[0]} \n ***Answer_{i+1}:*** {q[1]} \n"
-    
+        human_template = f"{human_template} ***Question_{i + 1}:*** {q[0]} \n ***Answer_{i + 1}:*** {q[1]} \n"
+
     chat_prompt = ChatPromptTemplate.from_messages([
         ("system", inference_template),
         ("human", human_template),
@@ -67,9 +67,10 @@ def infer_purpose_w_questions(file_path, content, q_and_a: List):
 def get_user_answers(questions):
     q_and_a = []
     for q in questions:
-        print(f"Question: {q}")
-        a = input('Answer: ')
+        print(in_cyan("Question: "), q)
+        a = input(in_yellow('Answer: '))
         if a: q_and_a.append([q, a])
+    print(in_green("Please wait, I'm now using your answers to infer your true purpose."))
     return q_and_a
 
 
@@ -92,8 +93,10 @@ def get_user_decision_on_inference(inference, file_path, content):
         new_inference = infer_purpose_w_questions(file_path, content, q_and_a)
         return get_user_decision_on_inference(new_inference, file_path, content)
 
+
 def get_clarifying_questions(file_path, content, inference):
-    print(in_green("Understood. I'm now generating some clarifying questions to provide a better idea of your intended purpose."))
+    print(in_green(
+        "Understood. I'm now generating some clarifying questions to provide a better idea of your intended purpose."))
     questions_template = """You are a world class software developer. 
     I will send you a filename, file content, and purpose. 
     You should then infer some clarifying questions which would help someone to understand the intent of the given project. 
@@ -148,7 +151,8 @@ def run_script(file_path):
         print(in_yellow(process.stdout))
         exit(0)
     else:
-        print(in_red("\nEek! Your code returned error code 1. Not to worry, we're going to fix this together. \U0001F603"))
+        print(in_red(
+            "\nEek! Your code returned error code 1. Not to worry, we're going to fix this together. \U0001F603"))
     return process.returncode, process.stderr, file_path
 
 
@@ -200,10 +204,10 @@ def can_you_fix_w_context(context: List[List[str]], error_message, purpose):
         ```<bool>1</bool>```
     """
     human_template = "***{error_message}*** \n ***{purpose}*** \n"
-    
+
     for i, c in enumerate(context):
-        human_template = f"{human_template} ***Filename_{i+1}:*** {c[0]} \n ***File_Contents_{i+1}:*** {c[1]} \n"
-    
+        human_template = f"{human_template} ***Filename_{i + 1}:*** {c[0]} \n ***File_Contents_{i + 1}:*** {c[1]} \n"
+
     chat_prompt = ChatPromptTemplate.from_messages([
         ("system", solvability_template),
         ("human", human_template),
@@ -254,10 +258,10 @@ def get_fix_code_w_context(context: List[List[str]], error_message, purpose):
     Assistant: {{list code}}
     """
     human_template = "Error Message: ***{error_message}*** \n Purpose: ***{purpose}***"
-    
+
     for i, c in enumerate(context):
-        human_template = f"{human_template} ***Filename_{i+1}:*** {c[0]} \n ***File_Contents_{i+1}:*** {c[1]} \n"
-    
+        human_template = f"{human_template} ***Filename_{i + 1}:*** {c[0]} \n ***File_Contents_{i + 1}:*** {c[1]} \n"
+
     chat_prompt = ChatPromptTemplate.from_messages([
         ("system", solvability_template),
         ("human", human_template),
@@ -273,11 +277,14 @@ def extract_code_from_markdown(markdown_text):
     code_blocks = re.findall(r'```(?:.*\n)?((?:.|\n)*?)```', markdown_text)
     return code_blocks
 
+
 def code_to_markdown(text):
     """Convert Python code blocks to Markdown format"""
     pattern = r"`{3}python\n(.*?)\n`{3}"
     repl = '```python\n\\1\n```'
     return re.sub(pattern, repl, text, flags=re.DOTALL)
+
+
 def diff(new_file, old_file, intent):
     inference_template = """
     You are a world class software developer. 
@@ -293,8 +300,8 @@ def diff(new_file, old_file, intent):
     input = {"new_file": new_file, "old_file": old_file, "intent": intent}
     return chain.invoke(input)
 
-def main():
 
+def main():
     parser = argparse.ArgumentParser(description="Run a Python script and capture its exit code.")
     parser.add_argument('script', type=str, help="Path to the Python script to run.")
     args = parser.parse_args()
@@ -306,7 +313,7 @@ def main():
 
             # Initial guess at purpose of program.
             purpose_inf = infer_purpose(file_path, content)
-            
+
             # If we need to we get a better purpose.
             purpose_inf = get_user_decision_on_inference(purpose_inf, file_path, content)
 
@@ -315,7 +322,7 @@ def main():
             for f in files_in_stack:
                 f_context = read_file_content(f)
                 files_context.append([f, f_context])
-            
+
             i = 1
             can_fix = False
             while not can_fix and i <= len(files_in_stack):
@@ -325,17 +332,16 @@ def main():
                     stderr_output,
                     purpose_inf.content
                 )
-                print(f"The LLM believes it can fix the file! {can_fix=}")
                 i += 1
-            
-            can_fix=False
-            
+
+            print(in_magenta(f"\nI reckon I can fix this for you!"))
+            code = None
             # If the can_fix is still False then tell user and give option to run get fix code again.
-            if can_fix == False:
+            if not can_fix:
                 ignore = ""
                 while ignore not in ['y', 'n']:
-                    ignore = input("I'm still not 100% confident I can come up with a correct solution. "
-                                   "Do you want it to try making a solution anyway? (y/n)").lower()
+                    ignore = input(in_cyan("\nI'm still not 100% confident I can come up with a correct solution. "
+                                           "Do you want it to try making a solution anyway? (y/n)")).lower()
                 if ignore == 'y':
                     code = get_fix_code_w_context(
                         files_context[:i],
@@ -345,20 +351,27 @@ def main():
                 else:
                     print("Bye!")
                     exit()
-            
-            code = get_fix_code_w_context(
-                files_context[:i],
-                stderr_output,
-                purpose_inf.content
-            )
-            
+            if not code:
+                code = get_fix_code_w_context(
+                    files_context[:i],
+                    stderr_output,
+                    purpose_inf.content
+                )
+
             code = extract_code_from_markdown(code)
             print(in_magenta("\n\nI think I may have fixed the code! Here is your solution:"))
             pretty_code = highlight(code[0], PythonLexer(), TerminalFormatter())
             print(pretty_code)
-            diff_output = diff(content, code, purpose_inf.content)
-            final_diff = code_to_markdown(diff_output.content)
-            print(final_diff)
+            ask = (
+                input(in_cyan("Would you like to understand the difference between the original and fixed code? (y/n)"))
+                .lower())
+            if ask == 'y':
+                diff_output = diff(content, code, purpose_inf.content)
+                final_diff = code_to_markdown(diff_output.content)
+                print(final_diff)
+            else:
+                print("Bye!")
+                exit()
 
     except FileNotFoundError:
         print(f"The file {args.script} does not exist or is not a file.", file=sys.stderr)
