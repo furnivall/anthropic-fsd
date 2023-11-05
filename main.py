@@ -106,12 +106,12 @@ def get_clarifying_questions(file_path, content, inference):
         ("human", human_template),
     ])
     chain = chat_prompt | ChatAnthropic(model="claude-2")
-    input = {
+    our_data = {
         "filename": file_path,
         "file_content": content,
         "purpose": inference,
     }
-    question_str = chain.invoke(input).content
+    question_str = chain.invoke(our_data).content
     root = ET.fromstring(question_str)
     # Extract each <text> value into list 
     questions = []
