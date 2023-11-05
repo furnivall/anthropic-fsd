@@ -6,9 +6,7 @@ from pprint import pprint
 from typing import List
 import xml.etree.ElementTree as ET
 from langchain.chat_models import ChatAnthropic
-from langchain.prompts.chat import (
-    ChatPromptTemplate,
-)
+from langchain.prompts.chat import ChatPromptTemplate
 
 
 def infer_purpose(file_path, content):
@@ -21,7 +19,7 @@ def infer_purpose(file_path, content):
     Use the heading 'Purpose' to indicate your answer.
     Give me your best attempt.
     """
-
+    
     human_template = "***{filename}*** \n ***{file_content}***"
     chat_prompt = ChatPromptTemplate.from_messages([
         ("system", inference_template),
@@ -32,19 +30,45 @@ def infer_purpose(file_path, content):
     return chain.invoke(input)
 
 
-def iterate_infer_purpose(inference, questions_and_answers):
-    pass
+def infer_purpose_w_questions(file_path, content, q_and_a: List):
+    inference_template = """
+    You are a world class software developer. 
+    I am going to send in a filename of a python file and the file's content. 
+    I want you to then infer what you believe the developer's overall intentions for the file's purpose.
+    You must ONLY return your assessment of the developer's intentions at a high level. 
+    You must not mention any mistakes or flaws or criticise the code in any way. 
+    Use the heading 'Purpose' to indicate your answer.
+    Give me your best attempt.
+    """
+    
+    human_template = "***Filename:*** {filename} \n ***File Content:*** {file_content} \n"
+    
+    for i, q in enumerate(q_and_a):
+        human_template = f"{human_template} ***Question_{i+1}:*** {q[0]} \n ***Answer_{i+1}:*** {q[1]} \n"
+    
+    print(human_template)
+    exit()
+        
+    chat_prompt = ChatPromptTemplate.from_messages([
+        ("system", inference_template),
+        ("human", human_template),
+    ])
+    chain = chat_prompt | ChatAnthropic(model="claude-2", temperature=0)
+    input = {"filename": file_path, "file_content": content}
+    return chain.invoke(input)
 
 
 def get_user_answers(questions):
     q_and_a = []
     for q in questions:
+        pprint("OPTIONALs hit ENTER")
         pprint(q)
         a = input('Answer: ')
         if a: q_and_a.append([q, a])
+    return q_and_a
 
 
-def get_user_decision_on_inference(inference):
+def get_user_decision_on_inference(inference, file_path, content):
     pprint(inference.content)
     user_input = 'fuck you claude'
     while user_input not in ['y', 'n']:
@@ -52,13 +76,20 @@ def get_user_decision_on_inference(inference):
     if user_input == 'y':
         return inference
     else:
-        exit(1, 'fuck you for not handling this case')
+        questions: List[str] = get_clarifying_questions(
+            file_path,
+            content,
+            inference,
+        )
+        q_and_a = get_user_answers(questions)
+        new_inference = infer_purpose_w_questions(file_path, content, q_and_a)
+        return get_user_decision_on_inference(new_inference, file_path, content)
 
 
-def get_clarifying_questions(file_path, content, error_message):
-    print("Inference accepted by user, checking for quick fix via LLM...")
+def get_clarifying_questions(file_path, content, inference):
+    print("Inference NOT accepted by user, getting some questions to clarify the inference of the purpose.")
     questions_template = """You are a world class software developer. 
-    I will send you a filename, file content, error_message, and purpose. 
+    I will send you a filename, file content, and purpose. 
     You should then infer some clarifying questions which would help someone to understand the intent of the given project. 
     Under no circumstances provide any other information. Give me your best attempt. 
     Provide the questions individually in structured XML format. 
@@ -70,7 +101,7 @@ def get_clarifying_questions(file_path, content, error_message):
     <question id="2"><text>What are you expecting as an output?</text></question>
     <question id="3"><text>How does this algorithm work?</text></question></questions>```. 
     Use as few questions as possible and do not ask simplistic questions, like 'What are you building?'"""
-    human_template = "***{filename}*** \n ***{file_content}*** \n ***{error_message}***"
+    human_template = "***{filename}*** \n ***{file_content}*** \n ***{purpose}***"
     chat_prompt = ChatPromptTemplate.from_messages([
         ("system", questions_template),
         ("human", human_template),
@@ -79,7 +110,7 @@ def get_clarifying_questions(file_path, content, error_message):
     input = {
         "filename": file_path,
         "file_content": content,
-        "error_message": error_message,
+        "purpose": inference,
     }
     question_str = chain.invoke(input).content
     root = ET.fromstring(question_str)
@@ -165,14 +196,12 @@ def main():
         content = read_file_content(file_path)
         if exit_code != 0:
             pprint(f"Code confirmed flawed. Continuing.")
-            # initial_inference = infer_purpose(file_path, content)
-            # get_user_decision_on_inference(initial_inference)
-
-            purpose_inf = infer_purpose(
-                file_path,
-                content
-            )
-            purpose_inf = get_user_decision_on_inference(purpose_inf)
+            
+            # Initial guess at purpose of program.
+            purpose_inf = infer_purpose(file_path, content)
+            
+            # If we need to we get a better purpose.
+            purpose_inf = get_user_decision_on_inference(purpose_inf, file_path, content)
 
             can_fix = False
             while not can_fix:
@@ -200,7 +229,7 @@ def main():
 
             # q_and_a = get_user_answers(questions)
 
-            breakpoint()
+            # breakpoint()
 
             # For future development needs, stderr_output is stored in a variable
             # You can process stderr_output as needed here
