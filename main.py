@@ -15,7 +15,7 @@ import time
 from pyfiglet import Figlet
 
 def infer_purpose(file_path, content):
-    print(in_green("I am now attempting to infer the purpose of your program. Please wait..."))
+    print(in_green("\nI am now attempting to infer the purpose of your program. Please wait..."))
     inference_template = """
     You are a world class software developer. 
     I am going to send in a filename of a python file and the file's content. 
@@ -75,7 +75,7 @@ def get_user_decision_on_inference(inference, file_path, content):
     print(in_magenta("\nHere's my best guess at your intended purpose:"))
     print(textwrap.fill(in_yellow(inference.content.split("Purpose:")[1].strip()), width=80))
     while user_input not in ['y', 'n']:
-        user_input = input(in_cyan("Do you agree with this ? (y/n)")).lower()
+        user_input = input(in_cyan("\nDo you agree that this was your intention? (y/n)")).lower()
     if user_input == 'y':
         print(in_green("\nPerfect! I'll get to work trying to fix it now. Please wait a few seconds..."))
         return inference
@@ -128,19 +128,24 @@ def run_script(file_path):
     print(in_green(Figlet(font='roman').renderText('FSD').strip()))
     print(in_magenta("Welcome to fsd. Your helpful assistant for fixing software bugs. \U0001F60E"))
     time.sleep(1)
-    print(in_yellow(f"Running your code now ({file_path}). Please wait."))
+    print(in_yellow(f"\nRunning your code now ({file_path}). Please wait..."))
     time.sleep(1)
-    process = subprocess.run(
-        [sys.executable, file_path],
-        capture_output=True,
-        text=True
-    )
+    try:
+        process = subprocess.run(
+            [sys.executable, file_path],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    except subprocess.TimeoutExpired:
+        print(in_red("\nEek! Your code took too long to run. I'm going to have to kill it. \U0001F62D"))
+        exit(1)
     if process.returncode == 0:
-        print(in_cyan("Your code ran successfully. Output as follows:"))
+        print(in_cyan("\nYour code ran successfully. Output as follows:"))
         print(in_yellow(process.stdout))
         exit(0)
     else:
-        print(in_red("Eek - your code returned error code 1. Not to worry, we're going to fix this together. \U0001F603"))
+        print(in_red("\nEek! Your code returned error code 1. Not to worry, we're going to fix this together. \U0001F603"))
     return process.returncode, process.stderr, file_path
 
 
@@ -211,6 +216,7 @@ def main():
 
     try:
         exit_code, stderr_output, file_path = run_script(args.script)
+        print(stderr_output)
         content = read_file_content(file_path)
         if exit_code != 0:
 
