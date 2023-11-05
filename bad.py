@@ -11,7 +11,7 @@ def get_user_input():
 
 def process_number(number):
     ratio = calculate_ratio(100, number)
-    print(f"The calculated ratio is: {ratio}")
+    print("The calculated ratio is: " + ratio)
 
 
 process_number(10)
