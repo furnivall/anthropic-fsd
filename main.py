@@ -9,6 +9,11 @@ from langchain.chat_models import ChatAnthropic
 from langchain.prompts.chat import (
     ChatPromptTemplate,
 )
+from pygments import highlight
+from pygments.lexers import PythonLexer
+from pygments.formatters import TerminalFormatter
+import textwrap
+import shutil
 
 
 def infer_purpose(file_path, content):
@@ -154,7 +159,10 @@ def get_fix_code(file_path, content, error_message, purpose):
     our_data = {"filename": file_path, "file_content": content, "error_message": error_message, "purpose": purpose}
     llm_output = chain.invoke(our_data).content
     return llm_output
-
+def extract_code_from_markdown(markdown_text):
+    # Regex to find fenced code blocks
+    code_blocks = re.findall(r'```(?:.*\n)?((?:.|\n)*?)```', markdown_text)
+    return code_blocks
 def main():
     parser = argparse.ArgumentParser(description="Run a Python script and capture its exit code.")
     parser.add_argument('script', type=str, help="Path to the Python script to run.")
@@ -189,9 +197,13 @@ def main():
                 stderr_output,
                 purpose_inf.content
             )
-            
-            pprint(code)
 
+            code = extract_code_from_markdown(code)
+            # Adjust code width according to terminal size
+            terminal_width = shutil.get_terminal_size((80, 24)).columns
+            print("\n\n\nCongratulations, you have fixed the code! Here is your solution:")
+            pretty_code = highlight(code[0], PythonLexer(), TerminalFormatter())
+            print(pretty_code)
             # questions: List[str] = get_clarifying_questions(
             #     file_path,
             #     content,
@@ -199,8 +211,6 @@ def main():
             # )
 
             # q_and_a = get_user_answers(questions)
-
-            breakpoint()
 
             # For future development needs, stderr_output is stored in a variable
             # You can process stderr_output as needed here
