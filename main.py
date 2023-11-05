@@ -235,7 +235,7 @@ def get_fix_code(file_path, content, error_message, purpose):
         ("system", solvability_template),
         ("human", human_template),
     ])
-    chain = chat_prompt | ChatAnthropic(model="claude-2", temperature=0)
+    chain = chat_prompt | ChatAnthropic(model="claude-2", temperature=0, max_tokens=100000)
     our_data = {"filename": file_path, "file_content": content, "error_message": error_message, "purpose": purpose}
     llm_output = chain.invoke(our_data).content
     return llm_output
@@ -273,6 +273,25 @@ def extract_code_from_markdown(markdown_text):
     code_blocks = re.findall(r'```(?:.*\n)?((?:.|\n)*?)```', markdown_text)
     return code_blocks
 
+def code_to_markdown(text):
+    """Convert Python code blocks to Markdown format"""
+    pattern = r"`{3}python\n(.*?)\n`{3}"
+    repl = '```python\n\\1\n```'
+    return re.sub(pattern, repl, text, flags=re.DOTALL)
+def diff(new_file, old_file, intent):
+    inference_template = """
+    You are a world class software developer. 
+    Explain the difference between the two python files based on the intention of building them.
+    """
+
+    human_template = "***{new_file}*** \n ***{old_file}*** \n ***{intent}***"
+    chat_prompt = ChatPromptTemplate.from_messages([
+        ("system", inference_template),
+        ("human", human_template),
+    ])
+    chain = chat_prompt | ChatAnthropic(model="claude-2", temperature=0)
+    input = {"new_file": new_file, "old_file": old_file, "intent": intent}
+    return chain.invoke(input)
 
 def main():
 
@@ -282,7 +301,6 @@ def main():
 
     try:
         exit_code, stderr_output, file_path = run_script(args.script)
-        print(stderr_output)
         content = read_file_content(file_path)
         if exit_code != 0:
 
@@ -316,7 +334,8 @@ def main():
             if can_fix == False:
                 ignore = ""
                 while ignore not in ['y', 'n']:
-                    ignore = input("The LLM is not confident it can come up with a correct solution. Do you want it to try making a solution anyway? (y/n)").lower()
+                    ignore = input("I'm still not 100% confident I can come up with a correct solution. "
+                                   "Do you want it to try making a solution anyway? (y/n)").lower()
                 if ignore == 'y':
                     code = get_fix_code_w_context(
                         files_context[:i],
@@ -337,6 +356,9 @@ def main():
             print(in_magenta("\n\nI think I may have fixed the code! Here is your solution:"))
             pretty_code = highlight(code[0], PythonLexer(), TerminalFormatter())
             print(pretty_code)
+            diff_output = diff(content, code, purpose_inf.content)
+            final_diff = code_to_markdown(diff_output.content)
+            print(final_diff)
 
     except FileNotFoundError:
         print(f"The file {args.script} does not exist or is not a file.", file=sys.stderr)
